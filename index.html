@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Data Validator | Production-Ready Data Processing</title>
+    <!-- PapaParse for CSV processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Liquid Glass Theme */
+            --bg-base: #e0e5ec;
+            --primary-color: #0066ff;
+            --primary-hover: #0052cc;
+            --success-color: #34c759;
+            --danger-color: #ff3b30;
+            --warning-color: #ffcc00;
+            
+            /* Glass Text */
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            
+            /* Glass properties */
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-bg-hover: rgba(255, 255, 255, 0.6);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+            --glass-highlight: inset 0 1px 1px rgba(255, 255, 255, 0.9), inset 0 -1px 1px rgba(255, 255, 255, 0.2);
+            --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 10px rgba(0, 0, 0, 0.03);
+            --glass-blur: blur(40px) saturate(200%);
+            
+            --radius: 28px;
+            --btn-radius: 20px;
+        }
+
+        /* Dark mode overrides (iOS adapts to dark/light automatically, let's do a stunning dark glass) */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-base: #000000;
+                --text-primary: #f5f5f7;
+                --text-secondary: #86868b;
+                --glass-bg: rgba(30, 30, 32, 0.45);
+                --glass-bg-hover: rgba(40, 40, 42, 0.6);
+                --glass-border: 1px solid rgba(255, 255, 255, 0.15);
+                --glass-highlight: inset 0 1px 1px rgba(255, 255, 255, 0.15), inset 0 -1px 1px rgba(0, 0, 0, 0.2);
+                --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.2);
+                --primary-color: #0a84ff;
+                --primary-hover: #007aff;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Fluid Gradient Orbs (The Liquid Effect) */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        body::before {
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(10, 132, 255, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(255, 59, 48, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, rgba(48, 209, 88, 0.25) 0%, transparent 40%);
+            animation: fluidBackground 30s ease-in-out infinite alternate;
+        }
+
+        body::after {
+            background: radial-gradient(circle at 10% 10%, rgba(191, 90, 242, 0.25) 0%, transparent 50%);
+            animation: fluidBackground2 25s ease-in-out infinite alternate-reverse;
+            filter: blur(80px);
+        }
+
+        @keyframes fluidBackground {
+            0% { transform: scale(1) translate(0, 0) rotate(0deg); }
+            50% { transform: scale(1.1) translate(5%, -5%) rotate(5deg); }
+            100% { transform: scale(1.05) translate(-5%, 5%) rotate(-5deg); }
+        }
+        
+        @keyframes fluidBackground2 {
+            0% { transform: scale(1) translate(0, 0) rotate(0deg); }
+            50% { transform: scale(1.2) translate(-5%, 5%) rotate(-5deg); }
+            100% { transform: scale(1.1) translate(5%, -5%) rotate(5deg); }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            width: 100%;
+            flex-grow: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(134, 134, 139, 0.2);
+        }
+
+        h1 {
+            font-weight: 700;
+            font-size: 2.2rem;
+            letter-spacing: -0.04em;
+        }
+
+        h2, h3 {
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: var(--glass-shadow), var(--glass-highlight);
+            padding: 2.5rem;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s;
+        }
+
+        .btn {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            color: var(--text-primary);
+            border: var(--glass-border);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--btn-radius);
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05), var(--glass-highlight);
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--glass-bg-hover);
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1), var(--glass-highlight);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), 0 8px 20px rgba(0, 102, 255, 0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), 0 12px 25px rgba(0, 102, 255, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed rgba(134, 134, 139, 0.4);
+            border-radius: var(--radius);
+            padding: 6rem 2rem;
+            text-align: center;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            box-shadow: var(--glass-shadow);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            margin-bottom: 2rem;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-color);
+            background: rgba(0, 102, 255, 0.05);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+        
+        .upload-area:hover .upload-icon {
+            transform: translateY(-8px) scale(1.05);
+        }
+
+        .hidden { display: none !important; }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            padding: 2rem;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-6px) scale(1.02);
+        }
+
+        .stat-title {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -0.05em;
+        }
+
+        .stat-value.success { color: var(--success-color); }
+        .stat-value.danger { color: var(--danger-color); }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 2.5rem;
+            padding: 0;
+            border-radius: var(--radius);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid rgba(134, 134, 139, 0.2);
+            white-space: nowrap;
+        }
+
+        th {
+            background: rgba(134, 134, 139, 0.1);
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s, color 0.2s;
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        th:hover { color: var(--text-primary); background: rgba(134, 134, 139, 0.15); }
+        tr:hover td { background: rgba(134, 134, 139, 0.05); }
+        
+        .row-invalid td:first-child { box-shadow: inset 4px 0 0 var(--danger-color); }
+        .row-valid td:first-child { box-shadow: inset 4px 0 0 var(--success-color); }
+
+        .badge {
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: rgba(52, 199, 89, 0.15); color: var(--success-color); border: 1px solid rgba(52, 199, 89, 0.3); }
+        .badge-danger { background: rgba(255, 59, 48, 0.15); color: var(--danger-color); border: 1px solid rgba(255, 59, 48, 0.3); }
+        
+        .error-text {
+            color: var(--danger-color);
+            font-size: 0.85rem;
+            white-space: normal;
+            min-width: 250px;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        /* Progress */
+        .progress-container { margin: 4rem 0; text-align: center; }
+        .progress-bar {
+            height: 12px;
+            background: rgba(134, 134, 139, 0.2);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 1.5rem auto;
+            max-width: 600px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0a84ff, #bf5af2);
+            width: 0%;
+            transition: width 0.1s linear;
+            border-radius: 6px;
+        }
+        .progress-text { color: var(--text-secondary); font-size: 0.95rem; font-weight: 500; }
+
+        /* Toolbar & Filters */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group { 
+            display: flex; 
+            gap: 0.5rem; 
+            background: rgba(134, 134, 139, 0.15); 
+            padding: 0.4rem; 
+            border-radius: 24px; 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        
+        .filter-btn { border: none !important; background: transparent !important; box-shadow: none !important; }
+        .filter-btn.btn-primary { background: var(--text-primary) !important; color: var(--bg-base) !important; text-shadow: none; }
+
+        .export-group { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Charts / Breakdowns */
+        .error-breakdown { margin-bottom: 2.5rem; }
+        .error-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+        .error-label {
+            width: 250px;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+        .error-bar-bg {
+            flex-grow: 1;
+            height: 12px;
+            background: rgba(134, 134, 139, 0.2);
+            margin: 0 1.5rem;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .error-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff3b30, #ff9500);
+            border-radius: 6px;
+        }
+        .error-count {
+            width: 50px;
+            text-align: right;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Chunk Downloads Area */
+        .chunk-area {
+            background: rgba(10, 132, 255, 0.05);
+            border: 1px solid rgba(10, 132, 255, 0.2);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .upload-area { padding: 4rem 1rem; }
+            h1 { font-size: 1.8rem; }
+            .container { padding: 1.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Nexus Data Validator</h1>
+            <button class="btn btn-primary" onclick="generateSampleData()">
+                <span style="margin-right: 0.5rem;">📥</span> Download Sample CSV
+            </button>
+        </header>
+
+        <main>
+            <!-- Upload Section -->
+            <div id="upload-section" class="upload-area animate-fade-in">
+                <div class="upload-icon">📁</div>
+                <h2 style="margin-bottom: 0.5rem;">Drag & Drop your CSV file here</h2>
+                <p style="color: var(--text-secondary); font-size: 1.1rem;">or click to browse from your computer</p>
+                <input type="file" id="file-input" accept=".csv" class="hidden">
+            </div>
+
+            <!-- Preview Section -->
+            <div id="preview-section" class="glass-panel hidden animate-fade-in" style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2>Data Preview</h2>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Reviewing first 5 rows</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="startValidation()" style="font-size: 1.1rem; padding: 0.75rem 2.5rem;">
+                        Run Validation 🚀
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr id="preview-header"></tr>
+                        </thead>
+                        <tbody id="preview-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progress-section" class="glass-panel progress-container hidden animate-fade-in">
+                <h2 id="progress-title" style="margin-bottom: 1rem;">Processing Data...</h2>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <div id="progress-text" class="progress-text">0%</div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="hidden animate-fade-in">
+                
+                <!-- KPIs -->
+                <div class="dashboard-grid">
+                    <div class="stat-card glass-panel">
+                        <div class="stat-title">Total Rows</div>
+                        <div id="stat-total" class="stat-value">0</div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-title">Valid Rows</div>
+                        <div id="stat-valid" class="stat-value success">0</div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-title">Auto-Corrected</div>
+                        <div id="stat-autocorrected" class="stat-value warning" style="color: var(--warning-color)">0</div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-title">Invalid Rows</div>
+                        <div id="stat-invalid" class="stat-value danger">0</div>
+                    </div>
+                </div>
+
+                <!-- Error Breakdown -->
+                <div class="error-breakdown glass-panel" id="error-breakdown-container">
+                    <h3 style="margin-bottom: 1.5rem;">Top Error Types</h3>
+                    <div id="error-list"></div>
+                </div>
+
+                <!-- Controls -->
+                <div class="toolbar">
+                    <div class="filter-group">
+                        <button class="btn filter-btn btn-primary" data-filter="ALL" onclick="setFilter('ALL', this)">All</button>
+                        <button class="btn filter-btn" data-filter="VALID" onclick="setFilter('VALID', this)">Valid</button>
+                        <button class="btn filter-btn" data-filter="AUTOCORRECTED" onclick="setFilter('AUTOCORRECTED', this)">Auto-Corrected</button>
+                        <button class="btn filter-btn" data-filter="INVALID" onclick="setFilter('INVALID', this)">Invalid</button>
+                    </div>
+                    <div class="export-group">
+                        <button id="btn-autofix" class="btn" onclick="applyAutoFixes()" style="background: rgba(255, 204, 0, 0.1); color: var(--warning-color); border-color: rgba(255, 204, 0, 0.3); display: none;">
+                            ✨ Auto-Fix Invalid Data
+                        </button>
+                        <button id="btn-export-valid" class="btn btn-primary" onclick="exportValid()">
+                            Export Cleaned Data
+                        </button>
+                        <button id="btn-export-invalid" class="btn" onclick="exportInvalid()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger-color); border-color: rgba(239, 68, 68, 0.3);">
+                            Export Error Report
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Chunk Download Area -->
+                <div id="chunk-downloads" class="chunk-area hidden animate-fade-in">
+                    <!-- Buttons injected via JS -->
+                </div>
+
+                <!-- Data Table -->
+                <div class="table-container glass-panel">
+                    <table>
+                        <thead>
+                            <tr id="table-header-row"></tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <button id="btn-prev" class="btn" onclick="changePage(-1)">← Previous</button>
+                    <span id="page-info" style="font-weight: 500; color: var(--text-secondary);">Page 1 of 1</span>
+                    <button id="btn-next" class="btn" onclick="changePage(1)">Next →</button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- State Variables ---
+        let headers = [];
+        let uploadedData = [];
+        let allRows = [];
+        let validRows = [];
+        let invalidRows = [];
+        let autoCorrectedRows = [];
+        let errorStats = {};
+        let seenCustomerIds = new Set();
+        let autoCorrectionNextId = 1000;
+        
+        let currentPage = 1;
+        const rowsPerPage = 20;
+        let currentFilter = 'ALL';
+        
+        let sortCol = null;
+        let sortAsc = true;
+
+        // --- DOM Elements ---
+        const uploadArea = document.getElementById('upload-section');
+        const fileInput = document.getElementById('file-input');
+
+        // --- Event Listeners for Drag & Drop ---
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        // --- File Handling ---
+        function handleFileSelection(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please upload a valid CSV file.');
+                return;
+            }
+            
+            resetState();
+            
+            document.getElementById('upload-section').classList.add('hidden');
+            document.getElementById('progress-section').classList.remove('hidden');
+            document.getElementById('progress-title').innerText = 'Reading File...';
+            document.getElementById('progress-fill').style.width = '0%';
+            
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: 'greedy', // strict skipping of empty lines
+                complete: function(results) {
+                    headers = results.meta.fields;
+                    if(!headers || !headers.includes('customer_id')) {
+                        alert('Invalid CSV format. Missing required columns (e.g., customer_id).');
+                        resetToUpload();
+                        return;
+                    }
+                    uploadedData = results.data;
+                    showPreview();
+                },
+                error: function(err) {
+                    alert('Error parsing CSV: ' + err.message);
+                    resetToUpload();
+                }
+            });
+        }
+
+        function resetState() {
+            uploadedData = [];
+            allRows = [];
+            validRows = [];
+            invalidRows = [];
+            errorStats = {};
+            seenCustomerIds.clear();
+            currentPage = 1;
+            sortCol = null;
+            sortAsc = true;
+            document.getElementById('chunk-downloads').classList.add('hidden');
+            document.getElementById('chunk-downloads').innerHTML = '';
+        }
+
+        function resetToUpload() {
+            document.getElementById('upload-section').classList.remove('hidden');
+            document.getElementById('progress-section').classList.add('hidden');
+            document.getElementById('preview-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.add('hidden');
+        }
+
+        // --- Preview Logic ---
+        function showPreview() {
+            document.getElementById('progress-section').classList.add('hidden');
+            const previewContainer = document.getElementById('preview-section');
+            previewContainer.classList.remove('hidden');
+            
+            const thead = document.getElementById('preview-header');
+            const tbody = document.getElementById('preview-body');
+            
+            thead.innerHTML = '';
+            headers.forEach(h => {
+                const th = document.createElement('th');
+                th.innerText = h;
+                thead.appendChild(th);
+            });
+            
+            tbody.innerHTML = '';
+            const previewRows = uploadedData.slice(0, 5);
+            previewRows.forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach(h => {
+                    const td = document.createElement('td');
+                    td.innerText = row[h] !== undefined ? row[h] : '';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Validation Logic Engine ---
+        function startValidation() {
+            document.getElementById('preview-section').classList.add('hidden');
+            document.getElementById('progress-section').classList.remove('hidden');
+            document.getElementById('progress-title').innerText = 'Validating Data...';
+            
+            // Process in chunks to prevent UI blocking
+            let index = 0;
+            const chunkSize = 500;
+            
+            function processNextChunk() {
+                const end = Math.min(index + chunkSize, uploadedData.length);
+                
+                for(; index < end; index++) {
+                    const processedRow = validateRow(uploadedData[index]);
+                    allRows.push(processedRow);
+                    
+                    if(processedRow._isValid) {
+                        validRows.push(processedRow);
+                    } else {
+                        invalidRows.push(processedRow);
+                    }
+                    
+                    if (processedRow._errors && processedRow._errors.length > 0) {
+                        processedRow._errors.forEach(err => {
+                            errorStats[err] = (errorStats[err] || 0) + 1;
+                        });
+                    }
+                }
+                
+                const progress = Math.round((index / uploadedData.length) * 100);
+                document.getElementById('progress-fill').style.width = `${progress}%`;
+                document.getElementById('progress-text').innerText = `${progress}% (${index.toLocaleString()} / ${uploadedData.length.toLocaleString()} rows)`;
+                
+                if (index < uploadedData.length) {
+                    requestAnimationFrame(processNextChunk);
+                } else {
+                    finishProcessing();
+                }
+            }
+            
+            requestAnimationFrame(processNextChunk);
+        }
+
+        function validateRow(originalRow) {
+            let row = { ...originalRow };
+            let errors = [];
+            const isEmpty = (val) => val === undefined || val === null || String(val).trim() === '';
+
+            // 1. Required fields check
+            const required = ['customer_id', 'full_name', 'email', 'phone_number', 'city', 'signup_date'];
+            required.forEach(field => {
+                if (isEmpty(row[field])) errors.push(`Missing ${field}`);
+            });
+
+            // 2. Duplicate customer_id check
+            if (!isEmpty(row.customer_id)) {
+                const cid = String(row.customer_id).trim();
+                if (seenCustomerIds.has(cid)) errors.push('Duplicate customer_id');
+                else seenCustomerIds.add(cid);
+            }
+
+            // 3. Name Validation
+            if (!isEmpty(row.full_name)) {
+                if (!/[a-zA-Z]/.test(String(row.full_name).trim())) errors.push('Full name must contain letters');
+            }
+
+            // 4. Email Validation
+            if (!isEmpty(row.email)) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(String(row.email).trim())) errors.push('Invalid email format');
+            }
+
+            // 5. Phone Validation (no country code, exact 10 digits)
+            if (!isEmpty(row.phone_number)) {
+                const rawPhone = String(row.phone_number).trim().replace(/[\s\-\+\(\)]/g, '');
+                if (!/^\d{10}$/.test(rawPhone)) errors.push('Phone number must be exactly 10 digits');
+            }
+
+            // 6. Date Validation
+            if (!isEmpty(row.signup_date)) {
+                const d = String(row.signup_date).trim();
+                const ymd = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
+                const dmy = /^\d{2}\/\d{2}\/\d{4}$/; // DD/MM/YYYY
+                const mdy = /^\d{2}-\d{2}-\d{4}$/; // MM-DD-YYYY
+                
+                let validDate = false;
+                if (ymd.test(d) || dmy.test(d) || mdy.test(d)) {
+                    let year, month, day;
+                    if (ymd.test(d)) { [year, month, day] = d.split('-'); }
+                    else if (dmy.test(d)) { [day, month, year] = d.split('/'); }
+                    else if (mdy.test(d)) { [month, day, year] = d.split('-'); }
+                    
+                    const dateObj = new Date(year, month - 1, day);
+                    if (dateObj.getFullYear() == year && dateObj.getMonth() == month - 1 && dateObj.getDate() == day) {
+                        validDate = true;
+                    }
+                }
+                if (!validDate) errors.push('Invalid signup_date format or value');
+            }
+
+            row._isValid = errors.length === 0;
+            row._errors = errors;
+            row._isAutoCorrected = false;
+            row._fixes = [];
+            return row;
+        }
+
+        function autoFixRow(originalRow) {
+            let row = { ...originalRow }; // Clone to fix
+            let originalErrors = [...row._errors];
+            let fixes = [];
+            
+            const isEmpty = (val) => val === undefined || val === null || String(val).trim() === '';
+
+            // 1. customer_id check & fix
+            if (isEmpty(row.customer_id)) {
+                originalErrors.push('Missing customer_id');
+                row.customer_id = `AUTO-${autoCorrectionNextId++}`;
+                fixes.push('Generated missing ID');
+                seenCustomerIds.add(row.customer_id);
+            } else {
+                let cid = String(row.customer_id).trim();
+                if (seenCustomerIds.has(cid)) {
+                    originalErrors.push('Duplicate customer_id');
+                    row.customer_id = `${cid}_1`;
+                    while(seenCustomerIds.has(row.customer_id)) {
+                        row.customer_id += '1';
+                    }
+                    fixes.push('Appended suffix to duplicate ID');
+                    seenCustomerIds.add(row.customer_id);
+                } else {
+                    seenCustomerIds.add(cid);
+                }
+            }
+
+            // 2. Name Validation & fix
+            if (isEmpty(row.full_name) || !/[a-zA-Z]/.test(String(row.full_name))) {
+                if (!isEmpty(row.full_name)) originalErrors.push('Full name must contain letters');
+                else originalErrors.push('Missing full_name');
+                row.full_name = "Unknown Customer";
+                fixes.push('Set missing name to Unknown');
+            }
+
+            // 3. Email Validation & fix
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (isEmpty(row.email) || !emailRegex.test(String(row.email).trim())) {
+                if (!isEmpty(row.email)) originalErrors.push('Invalid email format');
+                else originalErrors.push('Missing email');
+                row.email = `placeholder_${row.customer_id}@example.com`;
+                fixes.push('Generated placeholder email');
+            }
+
+            // 4. Phone Validation & fix
+            if (isEmpty(row.phone_number)) {
+                originalErrors.push('Missing phone_number');
+                row.phone_number = '0000000000';
+                fixes.push('Set phone to 0000000000');
+            } else {
+                let rawPhone = String(row.phone_number).trim().replace(/[\s\-\+\(\)]/g, '');
+                if (!/^\d{10}$/.test(rawPhone)) {
+                    originalErrors.push('Phone number must be exactly 10 digits');
+                    if (rawPhone.length > 10) {
+                        row.phone_number = rawPhone.slice(-10);
+                        fixes.push('Truncated phone to 10 digits');
+                    } else {
+                        row.phone_number = rawPhone.padStart(10, '0');
+                        fixes.push('Padded phone to 10 digits');
+                    }
+                } else {
+                    // Update it to be clean anyway
+                    row.phone_number = rawPhone;
+                }
+            }
+
+            // 5. City fix
+            if (isEmpty(row.city)) {
+                originalErrors.push('Missing city');
+                row.city = "Unknown";
+                fixes.push('Set city to Unknown');
+            }
+
+            // 6. Date Validation & fix
+            if (isEmpty(row.signup_date)) {
+                originalErrors.push('Missing signup_date');
+                row.signup_date = new Date().toISOString().split('T')[0];
+                fixes.push('Set missing date to today');
+            } else {
+                const d = String(row.signup_date).trim();
+                const ymd = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
+                const dmy = /^\d{2}\/\d{2}\/\d{4}$/; // DD/MM/YYYY
+                const mdy = /^\d{2}-\d{2}-\d{4}$/; // MM-DD-YYYY
+                
+                let validDate = false;
+                if (ymd.test(d) || dmy.test(d) || mdy.test(d)) {
+                    let year, month, day;
+                    if (ymd.test(d)) { [year, month, day] = d.split('-'); }
+                    else if (dmy.test(d)) { [day, month, year] = d.split('/'); }
+                    else if (mdy.test(d)) { [month, day, year] = d.split('-'); }
+                    
+                    const dateObj = new Date(year, month - 1, day);
+                    if (dateObj.getFullYear() == year && dateObj.getMonth() == month - 1 && dateObj.getDate() == day) {
+                        validDate = true;
+                    }
+                }
+                if (!validDate) {
+                    originalErrors.push('Invalid signup_date format or value');
+                    row.signup_date = new Date().toISOString().split('T')[0];
+                    fixes.push('Set invalid date to today');
+                }
+            }
+
+            return {
+                ...row,
+                _isValid: true,
+                _isAutoCorrected: originalErrors.length > 0,
+                _errors: originalErrors,
+                _fixes: fixes
+            };
+        }
+
+        // --- Dashboard & Rendering Logic ---
+        function autoFixRow(originalRow) {
+            let row = { ...originalRow }; // Clone to fix
+            let originalErrors = [...row._errors];
+            let fixes = [];
+            
+            const isEmpty = (val) => val === undefined || val === null || String(val).trim() === '';
+
+            // 1. customer_id check & fix
+            if (isEmpty(row.customer_id)) {
+                row.customer_id = `AUTO-${autoCorrectionNextId++}`;
+                fixes.push('Generated missing ID');
+                seenCustomerIds.add(row.customer_id);
+            } else {
+                let cid = String(row.customer_id).trim();
+                if (originalErrors.includes('Duplicate customer_id')) {
+                    row.customer_id = `${cid}_1`;
+                    while(seenCustomerIds.has(row.customer_id)) {
+                        row.customer_id += '1';
+                    }
+                    fixes.push('Appended suffix to duplicate ID');
+                    seenCustomerIds.add(row.customer_id);
+                }
+            }
+
+            // 2. Name Validation & fix
+            if (isEmpty(row.full_name) || !/[a-zA-Z]/.test(String(row.full_name))) {
+                row.full_name = "Unknown Customer";
+                fixes.push('Set missing name to Unknown');
+            }
+
+            // 3. Email Validation & fix
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (isEmpty(row.email) || !emailRegex.test(String(row.email).trim())) {
+                row.email = `placeholder_${row.customer_id}@example.com`;
+                fixes.push('Generated placeholder email');
+            }
+
+            // 4. Phone Validation & fix
+            if (isEmpty(row.phone_number)) {
+                row.phone_number = '0000000000';
+                fixes.push('Set phone to 0000000000');
+            } else {
+                let rawPhone = String(row.phone_number).trim().replace(/[\s\-\+\(\)]/g, '');
+                if (!/^\d{10}$/.test(rawPhone)) {
+                    if (rawPhone.length > 10) {
+                        row.phone_number = rawPhone.slice(-10);
+                        fixes.push('Truncated phone to 10 digits');
+                    } else {
+                        row.phone_number = rawPhone.padStart(10, '0');
+                        fixes.push('Padded phone to 10 digits');
+                    }
+                } else {
+                    row.phone_number = rawPhone;
+                }
+            }
+
+            // 5. City fix
+            if (isEmpty(row.city)) {
+                row.city = "Unknown";
+                fixes.push('Set city to Unknown');
+            }
+
+            // 6. Date Validation & fix
+            if (isEmpty(row.signup_date)) {
+                row.signup_date = new Date().toISOString().split('T')[0];
+                fixes.push('Set missing date to today');
+            } else {
+                const d = String(row.signup_date).trim();
+                const ymd = /^\d{4}-\d{2}-\d{2}$/;
+                const dmy = /^\d{2}\/\d{2}\/\d{4}$/;
+                const mdy = /^\d{2}-\d{2}-\d{4}$/;
+                
+                let validDate = false;
+                if (ymd.test(d) || dmy.test(d) || mdy.test(d)) {
+                    let year, month, day;
+                    if (ymd.test(d)) { [year, month, day] = d.split('-'); }
+                    else if (dmy.test(d)) { [day, month, year] = d.split('/'); }
+                    else if (mdy.test(d)) { [month, day, year] = d.split('-'); }
+                    
+                    const dateObj = new Date(year, month - 1, day);
+                    if (dateObj.getFullYear() == year && dateObj.getMonth() == month - 1 && dateObj.getDate() == day) {
+                        validDate = true;
+                    }
+                }
+                if (!validDate) {
+                    row.signup_date = new Date().toISOString().split('T')[0];
+                    fixes.push('Set invalid date to today');
+                }
+            }
+
+            return {
+                ...row,
+                _isValid: true,
+                _isAutoCorrected: originalErrors.length > 0,
+                _errors: originalErrors,
+                _fixes: fixes
+            };
+        }
+
+        function applyAutoFixes() {
+            invalidRows.forEach(row => {
+                const fixedRow = autoFixRow(row);
+                
+                const index = allRows.indexOf(row);
+                if (index !== -1) {
+                    allRows[index] = fixedRow;
+                }
+                
+                validRows.push(fixedRow);
+                autoCorrectedRows.push(fixedRow);
+            });
+            
+            invalidRows = [];
+            
+            // Re-sort if needed, but easier just to re-render
+            finishProcessing();
+        }
+
+        // --- Dashboard & Rendering Logic ---
+        function finishProcessing() {
+            document.getElementById('progress-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+            
+            // Populate KPI widgets
+            document.getElementById('stat-total').innerText = allRows.length.toLocaleString();
+            document.getElementById('stat-valid').innerText = validRows.length.toLocaleString();
+            document.getElementById('stat-autocorrected').innerText = autoCorrectedRows.length.toLocaleString();
+            document.getElementById('stat-invalid').innerText = invalidRows.length.toLocaleString();
+            
+            document.getElementById('btn-export-valid').disabled = validRows.length === 0;
+            document.getElementById('btn-export-invalid').disabled = invalidRows.length === 0;
+            
+            // Toggle Auto-Fix button visibility
+            const autoFixBtn = document.getElementById('btn-autofix');
+            if (invalidRows.length > 0) {
+                autoFixBtn.style.display = 'inline-block';
+            } else {
+                autoFixBtn.style.display = 'none';
+            }
+            
+            renderErrorBreakdown();
+            updateTableHeader();
+            setFilter('ALL', document.querySelector('[data-filter="ALL"]'));
+        }
+
+        function renderErrorBreakdown() {
+            const container = document.getElementById('error-breakdown-container');
+            const list = document.getElementById('error-list');
+            list.innerHTML = '';
+            
+            const errors = Object.entries(errorStats).sort((a, b) => b[1] - a[1]);
+            
+            if (errors.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            
+            const maxCount = errors[0][1];
+            
+            // Display Top 5 errors
+            errors.slice(0, 5).forEach(([err, count]) => {
+                const pct = (count / maxCount) * 100;
+                list.innerHTML += `
+                    <div class="error-item">
+                        <div class="error-label" title="${err}">${err}</div>
+                        <div class="error-bar-bg">
+                            <div class="error-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="error-count">${count}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateTableHeader() {
+            const thead = document.getElementById('table-header-row');
+            thead.innerHTML = '';
+            
+            const displayCols = ['STATUS', 'ERRORS', ...headers];
+            displayCols.forEach(h => {
+                const th = document.createElement('th');
+                th.innerText = h;
+                
+                if (sortCol === h) {
+                    th.innerText += sortAsc ? ' ↑' : ' ↓';
+                }
+                
+                th.onclick = () => handleSort(h);
+                thead.appendChild(th);
+            });
+        }
+
+        function setFilter(filter, btnElement) {
+            currentFilter = filter;
+            currentPage = 1;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.style.background = 'transparent';
+                btn.style.border = '1px solid rgba(255,255,255,0.1)';
+            });
+            
+            if (btnElement) {
+                btnElement.classList.add('btn-primary');
+                btnElement.style.background = 'var(--primary-color)';
+                btnElement.style.border = '1px solid var(--primary-color)';
+            }
+            
+            renderTable();
+        }
+
+        function handleSort(col) {
+            if (sortCol === col) {
+                sortAsc = !sortAsc;
+            } else {
+                sortCol = col;
+                sortAsc = true;
+            }
+            
+            const sortFn = (a, b) => {
+                let valA = a[col] !== undefined ? a[col] : '';
+                let valB = b[col] !== undefined ? b[col] : '';
+                
+                if (col === 'STATUS') {
+                    valA = a._isValid ? 1 : 0;
+                    valB = b._isValid ? 1 : 0;
+                } else if (col === 'ERRORS') {
+                    valA = a._errors.join('');
+                    valB = b._errors.join('');
+                } else {
+                    const numA = Number(valA);
+                    const numB = Number(valB);
+                    if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                        valA = numA;
+                        valB = numB;
+                    } else {
+                        valA = String(valA).toLowerCase();
+                        valB = String(valB).toLowerCase();
+                    }
+                }
+                
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            };
+            
+            allRows.sort(sortFn);
+            validRows.sort(sortFn);
+            invalidRows.sort(sortFn);
+            
+            currentPage = 1;
+            renderTable();
+            updateTableHeader();
+        }
+
+        function renderTable() {
+            let data = allRows;
+            if (currentFilter === 'VALID') data = validRows;
+            if (currentFilter === 'AUTOCORRECTED') data = autoCorrectedRows;
+            if (currentFilter === 'INVALID') data = invalidRows;
+            
+            const totalPages = Math.ceil(data.length / rowsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            const startIdx = (currentPage - 1) * rowsPerPage;
+            const endIdx = startIdx + rowsPerPage;
+            const pageData = data.slice(startIdx, endIdx);
+            
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            pageData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = row._isValid ? 'row-valid' : 'row-invalid';
+                
+                let badgeClass = row._isValid ? (row._isAutoCorrected ? 'badge-warning' : 'badge-success') : 'badge-danger';
+                let badgeText = row._isValid ? (row._isAutoCorrected ? 'AUTO-FIXED' : 'VALID') : 'INVALID';
+                
+                let html = `<td>
+                    <span class="badge ${badgeClass}" style="${row._isAutoCorrected ? 'background: rgba(255, 204, 0, 0.15); color: var(--warning-color); border: 1px solid rgba(255, 204, 0, 0.3);' : ''}">
+                        ${badgeText}
+                    </span>
+                </td>`;
+                
+                let fixesHtml = row._fixes && row._fixes.length ? `<br><span style="color:var(--warning-color); font-size: 0.8rem;">Fixed: ${row._fixes.join(', ')}</span>` : '';
+                html += `<td class="error-text">${row._errors.length ? row._errors.join('<br>') + fixesHtml : '<span style="color:var(--success-color)">None</span>'}</td>`;
+                
+                headers.forEach(h => {
+                    html += `<td>${row[h] !== undefined ? row[h] : ''}</td>`;
+                });
+                
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('page-info').innerText = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('btn-prev').disabled = currentPage === 1;
+            document.getElementById('btn-next').disabled = currentPage === totalPages;
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            renderTable();
+        }
+
+        // --- Export Logic ---
+        function downloadCSV(csvContent, fileName) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function handleExport(rows, prefix, exportHeaders) {
+            document.getElementById('chunk-downloads').classList.add('hidden');
+            
+            if (rows.length > 500) {
+                // Render chunk buttons
+                const container = document.getElementById('chunk-downloads');
+                container.innerHTML = `<p style="width: 100%; margin-bottom: 0.8rem; color: var(--text-primary); font-weight: 500;">Dataset large (${rows.length} rows). Download <b>${prefix}</b> in chunks:</p>`;
+                
+                const numChunks = Math.ceil(rows.length / 500);
+                for (let i = 0; i < numChunks; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = prefix === 'CleanedData' ? 'btn btn-primary' : 'btn';
+                    if (prefix !== 'CleanedData') {
+                        btn.style.background = 'rgba(239, 68, 68, 0.2)';
+                        btn.style.color = 'var(--danger-color)';
+                        btn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                    }
+                    btn.innerText = `Chunk ${i + 1}`;
+                    btn.onclick = () => {
+                        const chunkData = rows.slice(i * 500, (i + 1) * 500);
+                        const csv = Papa.unparse({ fields: exportHeaders, data: chunkData });
+                        downloadCSV(csv, `${prefix}_Part${i + 1}.csv`);
+                    };
+                    container.appendChild(btn);
+                }
+                container.classList.remove('hidden');
+            } else {
+                const csv = Papa.unparse({ fields: exportHeaders, data: rows });
+                downloadCSV(csv, `${prefix}.csv`);
+            }
+        }
+
+        function exportValid() {
+            const exportData = validRows.map(r => {
+                const copy = { ...r };
+                delete copy._isValid;
+                delete copy._errors;
+                return copy;
+            });
+            handleExport(exportData, 'CleanedData', headers);
+        }
+
+        function exportInvalid() {
+            const errorHeaders = [...headers, 'ERRORS'];
+            const exportData = invalidRows.map(r => {
+                const copy = { ...r };
+                copy.ERRORS = copy._errors.join(' | ');
+                delete copy._isValid;
+                delete copy._errors;
+                return copy;
+            });
+            handleExport(exportData, 'ErrorReport', errorHeaders);
+        }
+
+        // --- Sample Data Generator ---
+        function generateSampleData() {
+            const csv = [
+                "customer_id,full_name,email,phone_number,city,signup_date",
+                "CUST-001,John Doe,john@example.com,9876543210,New York,2023-10-01", // Valid
+                "CUST-002,Jane Smith,jane.smith@email.com,1234567890,Los Angeles,10/15/2023", // Valid
+                "CUST-003,Bob Johnson,bob@domain.co,5551234567,Chicago,11-20-2023", // Valid
+                "CUST-004,Alice Brown,alice@brown,9876543210,Houston,2023-10-01", // Invalid email
+                "CUST-005,Charlie Davis,charlie@example.com,12345,Phoenix,2023-10-01", // Invalid phone (too short)
+                ",Dave Evans,dave@example.com,9876543210,Philadelphia,2023-10-01", // Missing customer_id
+                "CUST-001,Eve Foster,eve@example.com,9876543210,San Antonio,2023-10-01", // Duplicate customer_id
+                "CUST-008,12345,grace@example.com,9876543210,San Diego,2023-10-01", // Invalid name (no letters)
+                "CUST-009,Henry Ivy,henry@example.com,9876543210,Dallas,2023-13-45", // Invalid date
+                "CUST-010,Ivy Jones,ivy@example.com,9876543210,,2023-10-01", // Missing city
+                "CUST-011,Jack King,jack@example.com,9876543210,Austin,2023-10-01", // Valid
+                "CUST-012,Karen Lee,karen@example.com,9876543210,Jacksonville,2023-10-01", // Valid
+                "CUST-013,Leo Mia,leo@example.com,9876543210,Fort Worth,2023-10-01", // Valid
+                "CUST-014,Mia Noah,mia@example.com,9876543210,Columbus,2023-10-01", // Valid
+                "CUST-015,Noah Owen,noah@example.com,123456789012,Charlotte,2023-10-01", // Invalid phone (too long)
+                "CUST-016,Owen Paul,owen@example.com,9876543210,San Francisco,01/10/2023", // Valid (DD/MM/YYYY)
+                "CUST-017,Paul Quinn,paul@example.com,9876543210,Indianapolis,10-01-2023", // Valid (MM-DD-YYYY)
+                "CUST-018,Quinn Rose,quinn@example.com,9876543210,Seattle,2023-10-01", // Valid
+                "CUST-019,Rose Sam,rose@example.com,9876543210,Denver,2023-10-01", // Valid
+                "CUST-020,Sam Tina,sam@example.com,9876543210,Washington,2023-10-01" // Valid
+            ].join('\n');
+            
+            downloadCSV(csv, 'Customer_Sample_Data.csv');
+        }
+    </script>
+</body>
+</html>
